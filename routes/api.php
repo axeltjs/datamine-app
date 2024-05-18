@@ -22,5 +22,7 @@ Route::middleware('auth:passport')->get('/user', function (Request $request) {
 // Route::middleware('auth')->group(function () {
 Route::get('task/list', [TaskController::class, 'index'])->name('task.list');
 Route::post('task/create', [TaskController::class, 'create'])->name('task.create');
+Route::put('task/update/{id}', [TaskController::class, 'update'])->name('task.update');
+Route::put('task/checklist/{id}', [TaskController::class, 'checklist'])->name('task.checklist');
 Route::delete('task/delete/{id}', [TaskController::class, 'destroy'])->name('task.delete');
 // });

@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
 import toast, { toastConfig } from 'react-simple-toasts';
 import 'react-simple-toasts/dist/theme/dark.css';
+import { list } from 'postcss';
 
 export default function List({ auth }) {
     const [edit, setEdit] = useState([]);
@@ -14,23 +15,54 @@ export default function List({ auth }) {
     const addTask = (e) => {
         e.preventDefault();
 
+        if (values.length < 1) {
+            toast('Invalid input!');
+            return;
+        }
+
+        let saveTask = {
+            task: values
+        }
+
         if (edit.id) {
+            fetch(route('task.update', edit.id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saveTask)
+            }).then((resp) => {
+                const updatedTodo = {
+                    ... edit,
+                    task_name: values
+                }
+                console.log(updatedTodo);
+
+                const editTodoIndex = listTask.findIndex(function (todo) {
+                    return todo.id === edit.id;
+                })
+
+                const updatedListTodo = [ ... listTask]; // bikin array baru untuk sementara
+                updatedListTodo[editTodoIndex] = updatedTodo;
+                setListTask(updatedListTodo); // array tadi, diupdate ke array Todos
+            });
             toast('Task has been edited!');
-
         } else {
-            let saveTask = {
-                task: values
-            }
-
             fetch(route('task.create'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(saveTask)
+            }).then((resp) => {
+                return resp.json();
+            }).then((data) => {
+                setListTask([...listTask, {
+                    id: data.id,
+                    task_name: data.task_name,
+                    is_complete: 0
+                }]);
             });
             toast('Task has been added!');
         }
+
         cancelEdit();
-        getData();
     };
 
     async function getData() {
@@ -57,6 +89,15 @@ export default function List({ auth }) {
 
         setListTask(filteredTask);
         toast('Task has been deleted!');
+    }
+
+    let updateChecklist = (id, task_name) => {
+        fetch(route('task.checklist', id), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        toast(task_name + ' has been updated!');
     }
 
     let cancelEdit = () => {
@@ -119,7 +160,11 @@ export default function List({ auth }) {
                                 return(
                                     <li key={index} className="border-b border-gray-200 flex items-center justify-between py-4">
                                         <label className="flex items-center">
-                                            <input type="checkbox" className="mr-2" />
+                                            <input
+                                                type="checkbox"
+                                                onClick={ updateChecklist.bind(this, item.id, item.task_name) }
+                                                defaultChecked={ item.is_complete && 1 }
+                                                className="mr-2" />
                                             <span>{item.task_name}</span>
                                         </label>
                                         <div>
