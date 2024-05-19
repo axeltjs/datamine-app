@@ -20,7 +20,6 @@
         "vite": "^5.0.0"
     },
     "dependencies": {
-        "react-alert": "^7.0.3",
         "react-cookie": "^7.1.4",
         "react-simple-toasts": "^5.10.0"
     }
