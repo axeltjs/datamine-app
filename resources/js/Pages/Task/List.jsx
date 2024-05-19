@@ -4,6 +4,7 @@ import { Head, useForm } from '@inertiajs/react';
 import toast, { toastConfig } from 'react-simple-toasts';
 import 'react-simple-toasts/dist/theme/dark.css';
 import { CookiesProvider, useCookies } from 'react-cookie';
+import { fetchTodos, addTodo, editTodo, updateCheckTodo, deleteTodo } from '@/Services/TaskServices';
 
 export default function List({ auth }) {
     const [edit, setEdit] = useState([]);
@@ -11,9 +12,10 @@ export default function List({ auth }) {
     const [values, setValues] = useState('');
     const { post, processing } = useForm({});
     const [cookies, setCookie] = useCookies(['user']);
+    const oauth_access = cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token;
     toastConfig({ theme: 'dark' });
 
-    const addTask = (e) => {
+    const addTask = async (e) => {
         e.preventDefault();
 
         if (values.length < 1) {
@@ -26,94 +28,34 @@ export default function List({ auth }) {
         }
 
         if (edit.id) {
-            fetch(route('task.update', edit.id), {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
-                },
-                body: JSON.stringify(saveTask)
-            }).then((resp) => {
-                const updatedTodo = {
-                    ... edit,
-                    task_name: values
-                }
+            const updatedTodo = await editTodo(oauth_access, saveTask, edit.id);
+            setListTask(listTask.map(todo => todo.id === edit.id ? updatedTodo : todo));
 
-                const editTodoIndex = listTask.findIndex(function (todo) {
-                    return todo.id === edit.id;
-                })
-
-                const updatedListTodo = [ ... listTask]; // bikin array baru untuk sementara
-                updatedListTodo[editTodoIndex] = updatedTodo;
-                setListTask(updatedListTodo); // array tadi, diupdate ke array Todos
-            });
             toast('Task has been edited!');
         } else {
-            fetch(route('task.create'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
-                },
-                body: JSON.stringify(saveTask)
-            }).then((resp) => {
-                return resp.json();
-            }).then((data) => {
-                setListTask([...listTask, {
-                    id: data.id,
-                    task_name: data.task_name,
-                    is_complete: 0
-                }]);
-            });
+            const todo = await addTodo(oauth_access, saveTask);
+            setListTask([...listTask, todo]);
+
             toast('Task has been added!');
         }
 
         cancelEdit();
     };
 
-    async function getData() {
-        const request_event = await fetch(route('task.list'), {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
-            }
-        });
-        const response_event = await request_event.json();
-
-        response_event.status && setListTask([...response_event.result]);
-    }
-
     let editTask = (itemTask) => {
         setValues(itemTask.task_name);
         setEdit(itemTask);
     }
 
-    let deleteTask = (itemTask) => {
-        fetch(route('task.delete', itemTask.id), {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
-            }
-        });
+    let deleteTask = async (itemTask) => {
+        await deleteTodo(oauth_access, itemTask.id);
+        setListTask(listTask.filter(todo => todo.id !== itemTask.id));
 
-        const filteredTask = listTask.filter(function (reference) {
-            return reference.id !== itemTask.id;
-        });
-
-        setListTask(filteredTask);
         toast('Task has been deleted!');
     }
 
-    let updateChecklist = (id, task_name) => {
-        fetch(route('task.checklist', id), {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
-            }
-        });
+    let updateChecklist = async (id, task_name) => {
+        await updateCheckTodo(oauth_access, id);
 
         toast(task_name + ' has been updated!');
     }
@@ -124,7 +66,11 @@ export default function List({ auth }) {
     }
 
     useEffect(() => {
-        getData();
+        const loadTodos = async () => {
+            const todos = await fetchTodos(oauth_access);
+            setListTask(todos.result);
+          };
+          loadTodos();
     }, []);
 
     return (
@@ -176,7 +122,7 @@ export default function List({ auth }) {
                             listTask.length > 0 ?
                             listTask.map(function (item, index) {
                                 return(
-                                    <li key={index} className="border-b border-gray-200 flex items-center justify-between py-4">
+                                    <li key={item.id} className="border-b border-gray-200 flex items-center justify-between py-4">
                                         <label className="flex items-center">
                                             <input
                                                 type="checkbox"
