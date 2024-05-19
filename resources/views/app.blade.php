@@ -11,6 +11,10 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- Scripts -->
+        <script>
+            const oauth_server_id = '{{ config("services.oauth_server.client_id") }}';
+            const oauth_server_secret = '{{ config("services.oauth_server.client_secret") }}';
+        </script>
         @routes
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])

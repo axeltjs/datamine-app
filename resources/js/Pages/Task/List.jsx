@@ -3,13 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
 import toast, { toastConfig } from 'react-simple-toasts';
 import 'react-simple-toasts/dist/theme/dark.css';
-import { list } from 'postcss';
+import { CookiesProvider, useCookies } from 'react-cookie';
 
 export default function List({ auth }) {
     const [edit, setEdit] = useState([]);
     const [listTask, setListTask] = useState([]);
     const [values, setValues] = useState('');
     const { post, processing } = useForm({});
+    const [cookies, setCookie] = useCookies(['user']);
     toastConfig({ theme: 'dark' });
 
     const addTask = (e) => {
@@ -27,14 +28,16 @@ export default function List({ auth }) {
         if (edit.id) {
             fetch(route('task.update', edit.id), {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
+                },
                 body: JSON.stringify(saveTask)
             }).then((resp) => {
                 const updatedTodo = {
                     ... edit,
                     task_name: values
                 }
-                console.log(updatedTodo);
 
                 const editTodoIndex = listTask.findIndex(function (todo) {
                     return todo.id === edit.id;
@@ -48,7 +51,10 @@ export default function List({ auth }) {
         } else {
             fetch(route('task.create'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
+                },
                 body: JSON.stringify(saveTask)
             }).then((resp) => {
                 return resp.json();
@@ -66,7 +72,13 @@ export default function List({ auth }) {
     };
 
     async function getData() {
-        const request_event = await fetch(route('task.list'));
+        const request_event = await fetch(route('task.list'), {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
+            }
+        });
         const response_event = await request_event.json();
 
         response_event.status && setListTask([...response_event.result]);
@@ -80,7 +92,10 @@ export default function List({ auth }) {
     let deleteTask = (itemTask) => {
         fetch(route('task.delete', itemTask.id), {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
+            }
         });
 
         const filteredTask = listTask.filter(function (reference) {
@@ -94,7 +109,10 @@ export default function List({ auth }) {
     let updateChecklist = (id, task_name) => {
         fetch(route('task.checklist', id), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': cookies.user.oauth_access.token_type + ' ' + cookies.user.oauth_access.access_token,
+            }
         });
 
         toast(task_name + ' has been updated!');
