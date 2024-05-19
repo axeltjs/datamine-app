@@ -5,8 +5,10 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { CookiesProvider, useCookies } from 'react-cookie';
 
 export default function Register() {
+    const [cookies, setCookie] = useCookies(['user']);
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -20,10 +22,39 @@ export default function Register() {
         };
     }, []);
 
+    async function getToken() {
+        let creds = {
+            grant_type: 'password',
+            client_id: oauth_server_id,
+            client_secret: oauth_server_secret,
+            username: data.email,
+            password: data.password,
+            scope: '*'
+        };
+
+        await fetch(route('passport.token'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(creds)
+        }).then((resp) => {
+            return resp.json();
+        }).then((response_event) => {
+            setCookie('user', { oauth_access: response_event });
+        }).then(() => {
+            window.location.assign('/task');
+        });
+    }
+
     const submit = (e) => {
         e.preventDefault();
-
-        post(route('register'));
+        post(route('register'),{
+            onError: function(err) {
+                console.log(err);
+            },
+            onSuccess: function () {
+                getToken();
+            }
+        });
     };
 
     return (
